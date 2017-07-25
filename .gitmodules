@@ -1,0 +1,3 @@
+[submodule "pyexch"]
+	path = pyexch
+	url = https://github.com/andylytical/pyexch.git
