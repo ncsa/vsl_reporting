@@ -1,0 +1,24 @@
+* Get list of Past and Current Months
+  (Ignore already submitted months)
+  (Ignore future months)
+
+* Get events from Exchange from (earliest path month through today)
+
+* Convert Exchange events into VSL daily events
+  ie: vacation-half (vac=VH)  (id='vac-VH')
+      vacation-full (vac=VF)  (id='vac-VF')
+      vacation-none (vac=RM)  (id='vac-RM')
+      sick-half     (sick=SH) (id='sick-SH')
+      sick-full     (sick=SF) (id='sick-SF')
+      sick-none     (sick=RM) (id='sick-RM')
+
+* Load a date and extract current settings
+
+* Compare current settings to exchange data, for a date
+
+* Submit a change from: None -> vac-half
+* Submit a change from: None -> vac-full
+* Submit a change from: vac-full -> None
+* Submit a change from: None -> sick-half
+* Submit a change from: None -> sick-full
+* Submit a change from: sick-half -> None
