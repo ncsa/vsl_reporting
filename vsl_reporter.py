@@ -4,9 +4,7 @@ import datetime
 import tzlocal
 import string
 import re
-import pyexch
 
-import getpass
 import pprint
 
 LOGR = logging.getLogger(__name__)
@@ -53,7 +51,7 @@ class VSL_Reporter( object ):
             self.g.doc.save( outfn )
 
 
-    def _get_cycle_start( self, the_date ):
+    def get_cycle_start( self, the_date ):
         ''' Cycle runs from 16th of month 1 to 15th of month 2
             Return cycle start date
             for the cycle that the_date falls within
@@ -75,7 +73,7 @@ class VSL_Reporter( object ):
         return start_date
 
 
-    def _get_cycle_end( self, the_date ):
+    def get_cycle_end( self, the_date ):
         ''' Cycle runs from 16th of month 1 to 15th of month 2
             Return cycle end date
             for the cycle that the_date falls within
@@ -102,18 +100,24 @@ class VSL_Reporter( object ):
 
 
     def _mk_month_url( self, the_date ):
-        ts_month = self._get_cycle_start( the_date ).timestamp()
+        ts_month = int( self.get_cycle_start( the_date ).timestamp() )
         new_url = self.MONTH_URL.substitute( timev=ts_month )
         LOGR.debug( 'URL: {}'.format( new_url ) )
         return new_url
 
 
     def _mk_day_url( self, the_date ):
-        data = { 'timev': self._get_cycle_start( the_date ).timestamp(),
-                 'dayv': the_date.timestamp(),
+        data = { 'timev': int( self.get_cycle_start( the_date ).timestamp() ),
+                 'dayv': int( the_date.timestamp() ),
                }
         new_url = self.DAY_URL.substitute( data )
         return new_url
+
+
+    def _load_date( self, the_date ):
+        url = self._mk_day_url( the_date )
+        LOGR.debug( 'DAY URL: {}'.format( url ) )
+        self._go( url, outfn='01_day.html' )
 
 
     def get_overdue_months( self ):
@@ -133,30 +137,112 @@ class VSL_Reporter( object ):
         #LOGR.debug( self.g.doc.tree )
 
 
-    def load_date( self, the_date ):
-        url = self._mk_day_url( the_date )
-        LOGR.debug( 'DAY URL: {}'.format( url ) )
-        self._go( url, outfn='01_day.html' )
+    def _secs2halfday( self, s ):
+        ''' Return 0, 1, or 2 
+            indicating zero-day, half-day, or full-day, respectively
+        '''
+        rv = 1
+        if s < 7200 :
+            rv = 0
+        elif s >= 21600 :
+            rv = 2
+        return rv
 
-def run():
-    user = 'aloftus'
-    with open( '/home/aloftus/.ssh/imap_illinois_edu', 'r' ) as f:
-        for l in f:
-            pwd = l.rstrip()
-            break
-    vsl = VSL_Reporter( user, pwd )
-    overdue_ts = vsl.get_overdue_months()
-    overdue_month_start = vsl.ts2datetime( overdue_ts )
-#    overdue_month_end = vsl._get_cycle_end( overdue_month_start )
- 
-    # Get sick / vacation info from Exchange
-    domain_user = 'UOFI\\{}'.format( user )
-    email = '{}@illinois.edu'.format( user )
-    px = pyexch.PyExch( user=domain_user, email=email, pwd=pwd )
-    #events = px.get_events_filtered( overdue_month_start )
-    #pprint.pprint( events )
-    days_report = px.per_day_report( overdue_month_start )
-    pprint.pprint( days_report )
+
+    def _secs2fullday( self, s ):
+        ''' Return 0 or 1, indicating zero or full-day, respectively
+            half-day: ( 7200 <= half-day < 21600 )
+        '''
+        rv = 0
+        if s > 0:
+            rv = 1
+        return rv
+
+
+    def _secs2hours( self, s ):
+        ''' Round to nearest full number of hours
+        '''
+        hours = int( s / 3600 )
+        secs = s % 3600
+        if secs > 30:
+            hours += 1
+        if hours > 8:
+            hours = 8
+        if hours < 1:
+            hours = ''
+        return hours
+
+
+    def submit_date( self, the_date, **k ):
+        #TODO - WILL THIS WORK BY JUST CREATING AN HTTP GET (instead of posting the form)?
+        ''' Submit vacation / sick leave for the given date.
+            INPUT:
+                the_date: python date object
+                       k: secs for each type of personal time to report
+            Valid keys are: VACATION, SICK, FLOATINGHOLIDAY, BEREAVEMENT,
+                            JURYDUTY, MILITARYLEAVE
+            If key is 
+                SICK or VACATION: secs will be rounded to the nearest half-day
+                FLOATINGHOLIDAY: secs will be rounded UP to the nearest full-day
+                anything else: secs are converted to hours (up tp a max of 8)
+        '''
+        formdata = { 'VACATION'        : { 'NAME': 'vac' },
+                     'SICK'            : { 'NAME': 'sick' },
+                     'FLOATINGHOLIDAY' : { 'NAME': 'fholiday' },
+                     'BEREAVEMENT'     : { 'NAME': 'bereavement' },
+                     'JURYDUTY'        : { 'NAME': 'juryduty' },
+                     'MILITARYLEAVE'   : { 'NAME': 'military' },
+                 }
+        timevals = { 'VACATION'        : 0,
+                     'SICK'            : 0,
+                     'FLOATINGHOLIDAY' : 0,
+                     'BEREAVEMENT'     : 0,
+                     'JURYDUTY'        : 0,
+                     'MILITARYLEAVE'   : 0,
+                   }
+        timevals.update( k )
+
+        # Convert vacation, sick to half-days
+        choices = { 'VACATION': [ 'RM', 'VH', 'VF' ],
+                    'SICK'    : [ 'RM', 'SH', 'SF' ],
+                  }
+        for k, vlist in choices.items():
+            secs = timevals[ k ]
+            i = self._secs2halfday( secs )
+            formdata[ k ][ 'VAL' ] = vlist[i]
+#            LOGR.debug( 'Setting option {} to index {} as {}'.format( k, i, vlist[i] ) )
+#            LOGR.debug( 'Actual result: {}'.format( formdata[ k ][ 'VAL' ] ) )
+
+        # Round floating holiday to full-day
+        choices = { 'FLOATINGHOLIDAY': [ 'RM', 'FH' ] }
+        for k, vlist  in choices.items():
+            secs = timevals[ k ]
+            i = self._secs2halfday( secs )
+            formdata[ k ][ 'VAL' ] = vlist[i]
+            
+        # Remaining keys (in timevals) are per-hour values
+        for k in ( 'BEREAVEMENT', 'JURYDUTY', 'MILITARYLEAVE' ):
+            secs = timevals[ k ]
+            hours = self._secs2hours( secs )
+            formdata[ k ][ 'VAL' ] = str( hours )
+
+#        LOGR.debug( 'FORM DATA: {}'.format( pprint.pformat( formdata ) ) )
+#        raise SystemExit( 'abc' )
+
+        # Load the page
+        self._load_date( the_date )
+        # Get the form
+        self.g.doc.choose_form( name='form1' )
+        # Set the form values
+        for key in formdata:
+            name = formdata[ key ][ 'NAME' ]
+            val = formdata[ key ][ 'VAL' ]
+            self.g.doc.set_input( name, val )
+        # Submit form
+        self.g.doc.submit()
+        # Save return page
+        self.g.doc.save( '02_submit_response.html' )
+
 
 if __name__ == '__main__':
-    run()
+    print( 'VSL Reporter Module not valid from cmdline' )

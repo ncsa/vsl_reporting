@@ -4,8 +4,10 @@ import logging
 import pyexch
 import argparse
 import vsl_reporter
-
+import datetime
 import getpass
+import tzlocal
+
 import pprint
 
 LOGR = logging.getLogger(__name__)
@@ -74,7 +76,7 @@ def run():
     vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
     overdue_ts = vsl.get_overdue_months()
     overdue_month_start = vsl.ts2datetime( overdue_ts )
-#    overdue_month_end = vsl._get_cycle_end( overdue_month_start )
+    overdue_month_end = vsl.get_cycle_end( overdue_month_start )
  
     # Get sick / vacation info from Exchange
     domain_user = 'UOFI\\{}'.format( args.user )
@@ -85,6 +87,14 @@ def run():
     px = pyexch.PyExch( user=domain_user, email=email, pwd=args.passwd, regex_map=ptr_regex )
     days_report = px.per_day_report( overdue_month_start )
     pprint.pprint( days_report )
+#    tz_str = tzlocal.get_localzone()
+    for ewsdate, data in days_report.items():
+        #force EWSDate to Python date
+        date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day, tzinfo=tz_str)
+#        if date > overdue_month_end:
+#            LOGR.debug( 'End of month, skipping remaining dates' )
+#            break
+        vsl.submit_date( date, **data )
 
 if __name__ == '__main__':
     run()
