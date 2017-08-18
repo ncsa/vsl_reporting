@@ -90,7 +90,7 @@ def run():
 #    tz_str = tzlocal.get_localzone()
     for ewsdate, data in days_report.items():
         #force EWSDate to Python date
-        date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day, tzinfo=tz_str)
+        date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day )
 #        if date > overdue_month_end:
 #            LOGR.debug( 'End of month, skipping remaining dates' )
 #            break
