@@ -10,6 +10,4 @@ IFS=":"; PYPATH="${parts[*]}"
 IFS="$OIFS"
 
 PYTHONPATH="$PYPATH" \
-PYEXCH_AD_DOMAIN=UOFI \
-PYEXCH_EMAIL_DOMAIN=illinois.edu \
-./env/bin/python3 vsl.py "$@"
+python3 vsl.py "$@"

@@ -1,4 +1,5 @@
 import grab
+import weblib.error
 import logging
 import datetime
 import tzlocal
@@ -120,8 +121,10 @@ class VSL_Reporter( object ):
         self._go( url, outfn='01_day.html' )
 
 
-    def get_overdue_months( self ):
-        """ Only gets first (oldest) overdue month right now
+    def get_overdue_month( self ):
+        """ Only gets first (oldest) overdue month
+            Return: String - Unix timestamp
+            Throws: UserWarning( 'No Overdue Months' )
         """
         #today = datetime.datetime.now( tz=self.tz ).replace( **self.MIDNIGHT )
         #url = self._mk_month_url( today )
@@ -131,7 +134,10 @@ class VSL_Reporter( object ):
         # this negative lookahead regex magic groc'd from http://www.perlmonks.org/?node_id=188907
         re_pattern = 'a href=[^>]*content=month&time_v=([0-9]+)(?:(?!<\/tr>).)*Overdue'
         re_overdue = re.compile( re_pattern, re.DOTALL )
-        match_overdue = self.g.doc.rex_text( re_overdue )
+        try:
+            match_overdue = self.g.doc.rex_text( re_overdue )
+        except ( weblib.error.DataNotFound ) as e:
+            raise UserWarning( "No Overdue Months" )
         LOGR.debug( match_overdue )
         return match_overdue
         #LOGR.debug( self.g.doc.tree )
