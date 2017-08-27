@@ -9,18 +9,12 @@ import re
 import pprint
 
 LOGR = logging.getLogger(__name__)
-LOGR.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s')
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(formatter)
-LOGR.addHandler(ch)
 
 
 class VSL_Reporter( object ):
 
     #URL = 'https://internal.ncsa.illinois.edu/'
-    MIDNIGHT = { 'hour': 0, 'minute': 0, 'second': 0 }
+    MIDNIGHT = { 'hour': 0, 'minute': 0, 'second': 0, 'microsecond': 0 }
     URL = 'https://internal.ncsa.illinois.edu/mis/vsl/'
     MONTH_URL = string.Template( (
         'https://internal.ncsa.illinois.edu/mis/vsl/index.php'
@@ -42,7 +36,18 @@ class VSL_Reporter( object ):
 
 
     def ts2datetime( self, ts ):
-        return datetime.datetime.fromtimestamp( float( ts ), self.tz )
+        ''' Return datetime for midnight of the timestamp "ts"
+        '''
+#        return datetime.datetime.fromtimestamp( float( ts ), self.tz )
+        dt = datetime.datetime.fromtimestamp( float( ts ), self.tz )
+        return dt.replace( self.MIDNIGHT )
+
+
+    def date_as_midnight( self, thedate ):
+        ''' Return a datetime for midnight of the day given in thedate.
+            Input: datetime.date or datetime.datetime
+        '''
+        return datetime.datetime( thedate.year, thedate.month, thedate.day )
 
     def _go( self, url, outfn=None ):
         self.g.go( url )
@@ -71,7 +76,7 @@ class VSL_Reporter( object ):
             adjustment = start_date.day % 16
             diff = datetime.timedelta( days=( the_date.day + 11 + adjustment ) )
             start_date = the_date - diff
-        return start_date
+        return self.date_as_midnight( start_date )
 
 
     def get_cycle_end( self, the_date ):
@@ -97,7 +102,7 @@ class VSL_Reporter( object ):
                 d2 = d1 + datetime.timedelta( days=15 )
                 adjustment = 15 - d2.day
                 end_date = d2 + datetime.timedelta( days=adjustment )
-        return end_date
+        return self.date_as_midnight( end_date )
 
 
     def _mk_month_url( self, the_date ):

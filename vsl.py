@@ -6,21 +6,24 @@ import argparse
 import vsl_reporter
 import datetime
 import getpass
-import tzlocal
 import os
-
 import pprint
 
 def process_args():
-    desc = { 'description': 'NCSA Vacation/Sick Leave Time Reporting tool.',
-             'epilog': '''PYEXCH_REGEX_CLASSES = Dict
-                          PYEXCH_USER = String
-                          PYEXCH_AD_DOMAIN = String
-                          PYEXCH_EMAIL_DOMAIN = String
-                          Regex matching is always case-insensitive. 
-                       '''
+    constructor_args = { 
+        'formatter_class': argparse.RawDescriptionHelpFormatter,
+        'description': 'NCSA Vacation/Sick Leave Time Reporting tool.',
+        'epilog': '''
+Setting parameters via Environment Variables (same as pyexch.PyExch):
+    PYEXCH_USER = String
+    PYEXCH_AD_DOMAIN = String
+    PYEXCH_EMAIL_DOMAIN = String
+    PYEXCH_PWD_FILE = String
+    PYEXCH_REGEX_JSON = String
+        Regex matching is always case-insensitive. 
+''',
            }
-    parser = argparse.ArgumentParser( **desc )
+    parser = argparse.ArgumentParser( **constructor_args )
     parser.add_argument( '--user', help='Username' )
     parser.add_argument( '--pwdfile',
         help='Plain text passwd ***WARNING: for testing only***' )
@@ -42,7 +45,7 @@ def process_args():
         args.user = os.getenv( 'PYEXCH_USER' )
     if not args.user:
         args.user = getpass.getuser()
-        logging.info( 'No user specified. Using "{0}".'.format( args.user ) )
+        logging.warning( 'No user specified. Using "{0}".'.format( args.user ) )
     if not args.passwd:
         if not args.pwdfile:
             args.pwdfile = os.getenv( 'PYEXCH_PWD_FILE' )
@@ -62,37 +65,54 @@ def process_args():
 def run():
     args = process_args()
     vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
+    overdue_month_start = None
     try:
         overdue_ts = vsl.get_overdue_month()
     except ( UserWarning ) as e:
         if e.args[0] == "No Overdue Months":
-            now = datetime.datetime.now().astimezone( vsl.tz )
-            month_start = vsl.get_cycle_start( now )
-            overdue_ts = month_start.timestamp()
+            logging.debug( "caught No Overdue Months" )
+#            now = datetime.datetime.now().astimezone( vsl.tz )
+#            now = datetime.datetime.today().replace( **vsl.MIDNIGHT )
+            now = datetime.datetime.today()
+            overdue_month_start = vsl.get_cycle_start( now )
+#            overdue_ts = overdue_month_start.timestamp()
         else:
             raise e
-    overdue_month_start = vsl.ts2datetime( overdue_ts )
-    overdue_month_end = vsl.get_cycle_end( overdue_month_start )
+    if not overdue_month_start:
+        overdue_month_start = vsl.ts2datetime( overdue_ts )
+    #overdue_month_end = vsl.get_cycle_end( overdue_month_start )
+#    logging.debug( "overdue_ts: {}".format( overdue_ts ) )
+    logging.debug( "overdue_month_start: {}".format( overdue_month_start ) )
+#    logging.debug( "overdue_month_end: {}".format( overdue_month_end ) )
 
     if args.list_overdue:
         print( "Earliest Overdue Month: {}".format( overdue_month_start ) )
+        logging.info( "overdue month: {}".format( overdue_month_start ) )
         raise SystemExit()
  
     # Get sick / vacation info from Exchange
-    ptr_regex = { 'SICK'     : '(sick|doctor|dr. appt)',
-                  'VACATION' : '(vacation|OOTO|OOO|out of the office|out of office)',
-    }
-    px = pyexch.PyExch( regex_map=ptr_regex )
+#    ptr_regex = { 'SICK'     : '(sick|doctor|dr. appt)',
+#                  'VACATION' : '(vacation|OOTO|OOO|out of the office|out of office)',
+#    }
+#    px = pyexch.PyExch( regex_map=ptr_regex )
+    px = pyexch.PyExch( user=args.user, pwd=args.passwd )
     days_report = px.per_day_report( overdue_month_start )
-    pprint.pprint( days_report )
+    logging.debug( 'Days report from Exchange: {}'.format( days_report ) )
     for ewsdate, data in days_report.items():
         #force EWSDate to naive Python date
         date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day )
         if args.dryrun:
-            print( 'DRYRUN: date:{} data:{} ... doing nothing'.format( date, pprint.pformat( data ) ) )
-            continue
+            print( 'DRYRUN: date:{} data:{} ... doing nothing'.format( 
+                date, pprint.pformat( data ) ) )
         else:
             vsl.submit_date( date, **data )
+            logging.info( "Successfully submittited date:{} {}".format( date, data ) )
 
 if __name__ == '__main__':
+#    ch = logging.StreamHandler()
+#    ch.setLevel( logging.DEBUG )
+    fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
+#    formatter = logging.Formatter( fmt=fmt, style='%' )
+#    ch.setFormatter( formatter )
+    logging.basicConfig( level=logging.INFO, format=fmt )
     run()
