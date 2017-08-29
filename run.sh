@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Try to use python from virtualenv if it exists, else use system version
+py3=env/bin/python3
+[[ -x "$py3" ]] || py3=$( which python3 )
+
 # setup pythonpath
 parts=( $PYTHONPATH )
 for d in pyexch; do
@@ -10,4 +14,4 @@ IFS=":"; PYPATH="${parts[*]}"
 IFS="$OIFS"
 
 PYTHONPATH="$PYPATH" \
-python3 vsl.py "$@"
+$py3 vsl.py "$@"
