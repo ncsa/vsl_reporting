@@ -15,19 +15,19 @@ def process_args():
         'description': 'NCSA Vacation/Sick Leave Time Reporting tool.',
         'epilog': '''
 Setting parameters via Environment Variables (same as pyexch.PyExch):
-    PYEXCH_USER = String
-    PYEXCH_AD_DOMAIN = String
-    PYEXCH_EMAIL_DOMAIN = String
-    PYEXCH_PWD_FILE = String
-    PYEXCH_REGEX_JSON = String
-        Regex matching is always case-insensitive. 
+    PYEXCH_USER
+    PYEXCH_AD_DOMAIN
+    PYEXCH_EMAIL_DOMAIN
+    PYEXCH_PWD_FILE
+    PYEXCH_REGEX_JSON
 ''',
            }
     parser = argparse.ArgumentParser( **constructor_args )
     parser.add_argument( '--user', help='Username' )
     parser.add_argument( '--pwdfile',
         help='Plain text passwd ***WARNING: for testing only***' )
-    parser.add_argument( '--passwd', help=argparse.SUPPRESS )
+    parser.add_argument( '--ad_domain', help="Default: %(default)s" )
+    parser.add_argument( '--email_domain', help="Default: %(default)s" )
     parser.add_argument( '-n', '--dryrun', action='store_true' )
     action = parser.add_mutually_exclusive_group( required=True )
     action.add_argument( '--exch', action='store_true',
@@ -37,6 +37,8 @@ Setting parameters via Environment Variables (same as pyexch.PyExch):
     defaults = { 'user': None,
                  'pwdfile': None,
                  'passwd': None,
+                 'ad_domain': 'UOFI',
+                 'email_domain': 'illinois.edu',
     }
     parser.set_defaults( **defaults )
     args = parser.parse_args()
@@ -91,11 +93,11 @@ def run():
         raise SystemExit()
  
     # Get sick / vacation info from Exchange
-#    ptr_regex = { 'SICK'     : '(sick|doctor|dr. appt)',
-#                  'VACATION' : '(vacation|OOTO|OOO|out of the office|out of office)',
-#    }
-#    px = pyexch.PyExch( regex_map=ptr_regex )
-    px = pyexch.PyExch( user=args.user, pwd=args.passwd )
+    px = pyexch.PyExch( user=args.user, 
+                        pwd=args.passwd, 
+                        ad_domain=args.ad_domain,
+                        email_domain=args.email_domain
+                      )
     days_report = px.per_day_report( overdue_month_start )
     logging.debug( 'Days report from Exchange: {}'.format( days_report ) )
     for ewsdate, data in days_report.items():
