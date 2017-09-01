@@ -1,11 +1,20 @@
 #!/bin/bash
-py3=$( which python3 )
-if [[ -z "$py3" ]] ; then
-    echo "Python3 Required"
-    exit 1
+
+# Get Python
+read pycmd < <( ./get_py_assert_min_version.sh 3 )
+rc=$?
+if [[ $rc -ne 0 ]] ; then
+    echo "Fatal Error: while finding python"
+    exit $rc
 fi
-$py3 -m venv env
+if [[ -z "$pycmd" ]] ; then
+    echo "Oops, where's python?"
+    exit 99
+fi
+
+# Setup Virtual Environment
+$pycmd -m venv env
 ./env/bin/pip install -r requirements.txt
 
-# Update git submodules
+# Update Git Submodules
 git submodule update --init
