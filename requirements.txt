@@ -1,3 +1,3 @@
-exchangelib
-grab
-tzlocal
+exchangelib==1.9.5
+grab==0.6.38
+tzlocal==1.4
