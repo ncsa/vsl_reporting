@@ -23,3 +23,13 @@ NOTE: Requires Python 3 installed in a local linux environment
 1. `cd vsl_reporting`
 1. `./setup.sh`
 1. `run.sh --help`
+
+# Environment Variables
+Configuration is controlled through the following environment variables:
+*   VSL_USER             ( default: $PYEXCH_USER )
+*   VSL_PWD_FILE         ( default: $PYEXCH_PWD_FILE )
+*   PYEXCH_USER          ( no default )
+*   PYEXCH_PWD_FILE      ( no default )
+*   PYEXCH_AD_DOMAIN     ( default: UOFI )
+*   PYEXCH_EMAIL_DOMAIN  ( default: illinois.edu
+*   PYEXCH_REGEX_JSON    ( default: pyexch.PyExch.DEFAULT_REGEX_MAP )
