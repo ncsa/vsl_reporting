@@ -14,20 +14,19 @@ def process_args():
         'formatter_class': argparse.RawDescriptionHelpFormatter,
         'description': 'NCSA Vacation/Sick Leave Time Reporting tool.',
         'epilog': '''
-Setting parameters via Environment Variables (same as pyexch.PyExch):
+Program is controlled using environment variables.
+VSL calendar:
+    VSL_USER
+    VSL_PWD_FILE
+Exchange calendar:
     PYEXCH_USER
+    PYEXCH_PWD_FILE
     PYEXCH_AD_DOMAIN
     PYEXCH_EMAIL_DOMAIN
-    PYEXCH_PWD_FILE
     PYEXCH_REGEX_JSON
 ''',
            }
     parser = argparse.ArgumentParser( **constructor_args )
-    parser.add_argument( '--user', help='Username' )
-    parser.add_argument( '--pwdfile',
-        help='Plain text passwd ***WARNING: for testing only***' )
-    parser.add_argument( '--ad_domain', help="Default: %(default)s" )
-    parser.add_argument( '--email_domain', help="Default: %(default)s" )
     parser.add_argument( '-n', '--dryrun', action='store_true' )
     action = parser.add_mutually_exclusive_group( required=True )
     action.add_argument( '--exch', action='store_true',
@@ -37,18 +36,21 @@ Setting parameters via Environment Variables (same as pyexch.PyExch):
     defaults = { 'user': None,
                  'pwdfile': None,
                  'passwd': None,
-                 'ad_domain': 'UOFI',
-                 'email_domain': 'illinois.edu',
     }
     parser.set_defaults( **defaults )
     args = parser.parse_args()
-    # check user
+    # USER
+    if not args.user:
+        args.user = os.getenv( 'VSL_USER' )
     if not args.user:
         args.user = os.getenv( 'PYEXCH_USER' )
     if not args.user:
         args.user = getpass.getuser()
         logging.warning( 'No user specified. Using "{0}".'.format( args.user ) )
+    # PASSWORD
     if not args.passwd:
+        if not args.pwdfile:
+            args.pwdfile = os.getenv( 'VSL_PWD_FILE' )
         if not args.pwdfile:
             args.pwdfile = os.getenv( 'PYEXCH_PWD_FILE' )
         if args.pwdfile:
@@ -73,19 +75,13 @@ def run():
     except ( UserWarning ) as e:
         if e.args[0] == "No Overdue Months":
             logging.debug( "caught No Overdue Months" )
-#            now = datetime.datetime.now().astimezone( vsl.tz )
-#            now = datetime.datetime.today().replace( **vsl.MIDNIGHT )
             now = datetime.datetime.today()
             overdue_month_start = vsl.get_cycle_start( now )
-#            overdue_ts = overdue_month_start.timestamp()
         else:
             raise e
     if not overdue_month_start:
         overdue_month_start = vsl.ts2datetime( overdue_ts )
-    #overdue_month_end = vsl.get_cycle_end( overdue_month_start )
-#    logging.debug( "overdue_ts: {}".format( overdue_ts ) )
     logging.debug( "overdue_month_start: {}".format( overdue_month_start ) )
-#    logging.debug( "overdue_month_end: {}".format( overdue_month_end ) )
 
     if args.list_overdue:
         print( "Earliest Overdue Month: {}".format( overdue_month_start ) )
@@ -93,11 +89,7 @@ def run():
         raise SystemExit()
  
     # Get sick / vacation info from Exchange
-    px = pyexch.PyExch( user=args.user, 
-                        pwd=args.passwd, 
-                        ad_domain=args.ad_domain,
-                        email_domain=args.email_domain
-                      )
+    px = pyexch.PyExch()
     days_report = px.per_day_report( overdue_month_start )
     logging.debug( 'Days report from Exchange: {}'.format( days_report ) )
     for ewsdate, data in days_report.items():
@@ -111,10 +103,19 @@ def run():
             logging.info( "Successfully submittited date:{} {}".format( date, data ) )
 
 if __name__ == '__main__':
-#    ch = logging.StreamHandler()
-#    ch.setLevel( logging.DEBUG )
     fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
-#    formatter = logging.Formatter( fmt=fmt, style='%' )
-#    ch.setFormatter( formatter )
-    logging.basicConfig( level=logging.INFO, format=fmt )
+    logging.basicConfig( level=logging.DEBUG, format=fmt )
+#    for key in logging.Logger.manager.loggerDict:
+#        print(key)
+    no_debug = [ 
+        'connectionpool',
+        'weblib', 
+        'selection', 
+        'grab', 
+        'requests', 
+        'ntlm_auth', 
+        'exchangelib', 
+        'future_stdlib' ]
+    for key in no_debug:
+            logging.getLogger(key).setLevel(logging.CRITICAL)
     run()

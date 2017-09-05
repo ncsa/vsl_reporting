@@ -50,9 +50,10 @@ class VSL_Reporter( object ):
         return datetime.datetime( thedate.year, thedate.month, thedate.day )
 
     def _go( self, url, outfn=None ):
+        LOGR.debug( 'URL: {}'.format( url ) )
         self.g.go( url )
         LOGR.debug( 'CODE: {}'.format( self.g.doc.code ) )
-        LOGR.debug( 'HDRS: {}'.format( pprint.pformat( self.g.doc.headers ) ) )
+#        LOGR.debug( 'HDRS: {}'.format( pprint.pformat( self.g.doc.headers ) ) )
         if outfn:
             self.g.doc.save( outfn )
 
