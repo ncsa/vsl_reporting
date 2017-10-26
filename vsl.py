@@ -8,61 +8,51 @@ import datetime
 import getpass
 import os
 import pprint
+import netrc
 
 def process_args():
     constructor_args = { 
         'formatter_class': argparse.RawDescriptionHelpFormatter,
         'description': 'NCSA Vacation/Sick Leave Time Reporting tool.',
         'epilog': '''
-Program is controlled using environment variables.
-VSL calendar:
-    VSL_USER
-    VSL_PWD_FILE
-Exchange calendar:
-    PYEXCH_USER
-    PYEXCH_PWD_FILE
-    PYEXCH_AD_DOMAIN
-    PYEXCH_EMAIL_DOMAIN
+Program is controlled using the following environment variables:
+    NETRC
+        path to netrc file (default: ~/.netrc)
+        where netrc file has keys "NCSA_VSL" and "EXCH"
+        and the "EXCH" key has values for login, password, account
     PYEXCH_REGEX_JSON
+        JSON formatted string for use by PYEXCH to select and categorize
+        exchange events
+
+See also: https://github.com/andylytical/pyexch
 ''',
            }
     parser = argparse.ArgumentParser( **constructor_args )
     parser.add_argument( '-n', '--dryrun', action='store_true' )
+    parser.add_argument( '-k', '--netrckey',
+        help='key in netrc to use for login,passwd; default=%(default)s' )
     action = parser.add_mutually_exclusive_group( required=True )
     action.add_argument( '--exch', action='store_true',
         help='Load data from Exchange' )
     action.add_argument( '--list-overdue', action='store_true',
         help='List overdue dates and exit' )
     defaults = { 'user': None,
-                 'pwdfile': None,
                  'passwd': None,
+                 'netrckey': 'NCSA_VSL',
     }
     parser.set_defaults( **defaults )
     args = parser.parse_args()
-    # USER
+    # Load login and passwd from netrc
+    netrc_fn = os.getenv( 'NETRC' )
+    nrc = netrc.netrc( netrc_fn )
+    nrc_parts = nrc.authenticators( args.netrckey )
+    if nrc_parts:
+        args.user = nrc_parts[0]
+        args.passwd = nrc_parts[2]
     if not args.user:
-        args.user = os.getenv( 'VSL_USER' )
-    if not args.user:
-        args.user = os.getenv( 'PYEXCH_USER' )
-    if not args.user:
-        args.user = getpass.getuser()
-        logging.warning( 'No user specified. Using "{0}".'.format( args.user ) )
-    # PASSWORD
+        raise UserWarning( 'Empty username not allowed' )
     if not args.passwd:
-        if not args.pwdfile:
-            args.pwdfile = os.getenv( 'VSL_PWD_FILE' )
-        if not args.pwdfile:
-            args.pwdfile = os.getenv( 'PYEXCH_PWD_FILE' )
-        if args.pwdfile:
-            # get passwd from file
-            with open( args.pwdfile, 'r' ) as f:
-                for l in f:
-                    args.passwd = l.rstrip()
-                    break
-    if not args.passwd:
-        # prompt user for passwd
-        prompt = "Enter passwd for '{0}':".format( args.user )
-        args.passwd = getpass.getpass( prompt )
+        raise UserWarning( 'Empty passwd not allowed' )
     return args
 
 

@@ -40,7 +40,7 @@ class VSL_Reporter( object ):
         '''
 #        return datetime.datetime.fromtimestamp( float( ts ), self.tz )
         dt = datetime.datetime.fromtimestamp( float( ts ), self.tz )
-        return dt.replace( self.MIDNIGHT )
+        return dt.replace( **(self.MIDNIGHT) )
 
 
     def date_as_midnight( self, thedate ):
