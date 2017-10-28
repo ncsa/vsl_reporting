@@ -8,31 +8,25 @@ DEBUG=1
 
 [[ $DEBUG -eq 1 ]] && set -x
 
-# Set volume mounts
+# Set Image Name
+IMAGE="andylytical/ncsa-vsl-reporter:20171028"
+
+# Set volume mount (to provide .netrc file)
 # Format is 2-tuple of (local source, mount point inside container)
 MOUNTPOINT=( "j:\\aloftus\\private" "/private" )
 
-# Set Image Name
-IMAGE="andylytical/ncsa-vsl-reporter:20170905"
-
-
-# Set Environment Vars for Container
+# Set Environment Variable(s) for Container
 # Possible environment vars are:
-#   VSL_USER             ( default: $PYEXCH_USER )
-#   VSL_PWD_FILE         ( default: $PYEXCH_PWD_FILE )
-#   PYEXCH_USER          ( no default )
-#   PYEXCH_PWD_FILE      ( no default )
-#   PYEXCH_AD_DOMAIN     ( default: UOFI )
-#   PYEXCH_EMAIL_DOMAIN  ( default: illinois.edu
+#   NETRC                ( default: ~/.netrc )
 #   PYEXCH_REGEX_JSON    ( default: pyexch.PyExch.DEFAULT_REGEX_MAP )
-PYEXCH_USER=aloftus
-PYEXCH_PWD_FILE=/private/uiuc_exchange
+NETRC=/private/.netrc
+#PYEXCH_REGEX_JSON=
 
 action=
 [[ $TEST -eq 1 ]] && action=echo
 
 envs=()
-for v in ${!VSL_*} ${!PYEXCH_*} ; do
+for v in NETRC ${!PYEXCH_*} ; do
     envs+=( '-e' "$v=${!v}" )
 done
 
