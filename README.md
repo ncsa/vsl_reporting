@@ -37,7 +37,7 @@ Configuration is controlled through the following environment variables:
     to fill in the VSL calendar for the appropriate *vsl type* matching the
     _dictionary key_.
   * Example:
-    * `PYEXCH_REGEX_JSON='"SICK":"(sick|doctor|dr. appt)","VACATION":"(vacation|OOTO|OOO|out of the office|out of office)"'`
+    * `PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr. appt)","VACATION":"(vacation|OOTO|OOO|out of the office|out of office)"}'`
   * Additional valid keys
     * SICK
       * rounded to nearest half-day
