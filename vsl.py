@@ -94,18 +94,20 @@ def run():
 
 if __name__ == '__main__':
     fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
-    logging.basicConfig( level=logging.DEBUG, format=fmt )
+    logging.basicConfig( level=logging.INFO, format=fmt )
 #    for key in logging.Logger.manager.loggerDict:
 #        print(key)
     no_debug = [ 
         'connectionpool',
-        'weblib', 
-        'selection', 
-        'grab', 
-        'requests', 
-        'ntlm_auth', 
         'exchangelib', 
-        'future_stdlib' ]
+        'future_stdlib',
+        'grab', 
+        'ntlm_auth', 
+        'requests', 
+        'selection', 
+        'urllib3',
+        'weblib', 
+        ]
     for key in no_debug:
             logging.getLogger(key).setLevel(logging.CRITICAL)
     run()
