@@ -251,7 +251,7 @@ class VSL_Reporter( object ):
             val = formdata[ key ][ 'VAL' ]
             self.g.doc.set_input( name, val )
         # Submit form
-        self.g.doc.submit()
+        self.g.submit()
         # Save return page
         self.g.doc.save( '02_submit_response.html' )
 
