@@ -1,14 +1,14 @@
 #!/bin/env python3
 
-import logging
-import pyexch
 import argparse
-import vsl_reporter
 import datetime
 import getpass
+import logging
+import netrc
 import os
 import pprint
-import netrc
+import pyexch.pyexch
+import vsl_reporter
 
 def process_args():
     constructor_args = { 
@@ -31,14 +31,11 @@ See also: https://github.com/andylytical/pyexch
     parser.add_argument( '-n', '--dryrun', action='store_true' )
     parser.add_argument( '-k', '--netrckey',
         help='key in netrc to use for login,passwd; default=%(default)s' )
-    action = parser.add_mutually_exclusive_group( required=True )
-    action.add_argument( '--exch', action='store_true',
-        help='Load data from Exchange' )
-    action.add_argument( '--list-overdue', action='store_true',
+    parser.add_argument( '--list-overdue', action='store_true',
         help='List overdue dates and exit' )
     defaults = { 'user': None,
                  'passwd': None,
-                 'netrckey': 'NCSA_VSL',
+                 'netrckey': 'NETID',
     }
     parser.set_defaults( **defaults )
     args = parser.parse_args()
@@ -59,42 +56,35 @@ See also: https://github.com/andylytical/pyexch
 def run():
     args = process_args()
     vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
-    overdue_month_start = None
-    try:
-        overdue_ts = vsl.get_overdue_month()
-    except ( UserWarning ) as e:
-        if e.args[0] == "No Overdue Months":
-            logging.debug( "caught No Overdue Months" )
-            now = datetime.datetime.today()
-            overdue_month_start = vsl.get_cycle_start( now )
-        else:
-            raise e
-    if not overdue_month_start:
-        overdue_month_start = vsl.ts2datetime( overdue_ts )
-    logging.debug( "overdue_month_start: {}".format( overdue_month_start ) )
 
+    start, end = vsl.get_overdue_period()
+    if start is None:
+        raise SystemExit( 'No reports are due' )
+
+    msg = f'Report due for period: {start} - {end}'
+    logging.info( msg )
     if args.list_overdue:
-        print( "Earliest Overdue Month: {}".format( overdue_month_start ) )
-        logging.info( "overdue month: {}".format( overdue_month_start ) )
         raise SystemExit()
  
     # Get sick / vacation info from Exchange
-    px = pyexch.PyExch()
-    days_report = px.per_day_report( overdue_month_start )
-    logging.debug( 'Days report from Exchange: {}'.format( days_report ) )
+    px = pyexch.pyexch.PyExch()
+    days_report = px.per_day_report( start, end )
+    logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
     for ewsdate, data in days_report.items():
-        #force EWSDate to naive Python date
-        date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day )
-        if args.dryrun:
-            print( 'DRYRUN: date:{} data:{} ... doing nothing'.format( 
-                date, pprint.pformat( data ) ) )
-        else:
-            vsl.submit_date( date, **data )
-            logging.info( "Successfully submittited date:{} {}".format( date, data ) )
+       #force EWSDate to naive Python date
+       # date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day )
+       date = ewsdate
+       if args.dryrun:
+           print( f'DRYRUN: {date} {pprint.pformat(data)} ... doing nothing' )
+       else:
+           vsl.submit_date( date, **data )
+           logging.info( "Successfully submittited date:{} {}".format( date, data ) )
 
 if __name__ == '__main__':
     fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
-    logging.basicConfig( level=logging.INFO, format=fmt )
+    log_lvl = logging.DEBUG
+    # log_lvl = logging.INFO
+    logging.basicConfig( level=log_lvl, format=fmt )
 #    for key in logging.Logger.manager.loggerDict:
 #        print(key)
     no_debug = [ 

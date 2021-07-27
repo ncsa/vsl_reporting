@@ -8,7 +8,7 @@
 DEBUG=1
 
 # Uncomment to enable test mode (show what would be run)
-TEST=1
+#TEST=1
 
 # Set Image Name
 # (don't need docker image tag, it will be queried at runtime)
@@ -18,13 +18,14 @@ DK_IMAGE=ncsa-vsl-reporter
 # Set volume mount (to provide .netrc file)
 # Format is 2-tuple of (local source, mount point inside container)
 MOUNTPOINT=( "j:\\aloftus\\private" "/private" ) # WINDOWS
-#MOUNTPOINT=( "$HOME" "/private" ) # LINUX
+MOUNTPOINT=( "$HOME" "/private" ) # LINUX
 
 # Set Environment Variable(s) for Container
 # Possible environment vars are:
 #   NETRC                ( default: ~/.netrc )
 #   PYEXCH_REGEX_JSON    ( No Default, This Is Required )
 NETRC=/private/.netrc
+NETRC=/private/.ssh/netrc
 #PYEXCH_REGEX_JSON=
 
 ###
@@ -58,9 +59,11 @@ action=
 [[ $TEST -eq 1 ]] && action=echo
 
 # Get most recent docker image tag
-DK_TAG=$( latest_docker_tag "$DK_USER/$DK_IMAGE" )
-[[ -z "$DK_TAG" ]] && die "No tags found for docker image: '$DK_USER/$DK_IMAGE'"
-IMAGE="$DK_USER/$DK_IMAGE:$DK_TAG"
+#DK_TAG=$( latest_docker_tag "$DK_USER/$DK_IMAGE" )
+#[[ -z "$DK_TAG" ]] && die "No tags found for docker image: '$DK_USER/$DK_IMAGE'"
+#IMAGE="$DK_USER/$DK_IMAGE:$DK_TAG"
+IMAGE="$DK_USER/$DK_IMAGE"
+IMAGE=$(docker images -q andylytical/ncsa-vsl-reporter | head -1)
 
 envs=()
 for v in NETRC ${!PYEXCH_*} ; do

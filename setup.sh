@@ -13,8 +13,8 @@ if [[ -z "$pycmd" ]] ; then
 fi
 
 # Setup Virtual Environment
-$pycmd -m venv env
-./env/bin/pip install -r requirements.txt
+$pycmd -m venv .venv
+./.venv/bin/pip install -r requirements.txt
 
 # Update Git Submodules
 git submodule update --init

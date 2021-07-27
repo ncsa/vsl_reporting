@@ -1,28 +1,16 @@
 # vsl_reporting
-A tool to automate reporting personal time to NCSA's VSL calendar using data from Exchange calendar.
+A tool to automate reporting time to UIUC Engr IT VSL calendar using data from Exchange calendar.
 
 # Dependencies
-* Python >= 3.6
+* Python >= 3.9
 
 # Installation and Usage
-There are two ways to use this tool: Docker and Python Virtual Environment
 
-## Docker
-1. `curl -o ~/vsl_reporter_as_docker.sh https://raw.githubusercontent.com/ncsa/vsl_reporting/master/docker_run.sh`
-1. Edit `~/vsl_reporter_as_docker.sh` to set evnironment variables
-1. `~/vsl_reporter_as_docker.sh`
-1. Inside docker container
-   1. `./run.sh --help`
-   1. `./run.sh --list-overdue`
-   1. `./run.sh -n --exch`
-   1. `./run.sh --exch`
+## Pre-built Docker Image
+See: ...
 
-## Python Virtual Environment
-NOTE: Requires Python 3 installed in a local linux environment
-1. `git clone https://github.com/ncsa/vsl_reporting.git`
-1. `cd vsl_reporting`
-1. `./setup.sh`
-1. `run.sh --help`
+## Build the Docker Image locally
+1. git clone https://github.com/ncsa/vsl_reporting
 
 # Environment Variables
 Configuration is controlled through the following environment variables:
@@ -45,24 +33,19 @@ Configuration is controlled through the following environment variables:
       * rounded to nearest half-day
     * FLOATINGHOLIDAY
       * rounded to nearest full day
-    * BEREAVEMENT
-      * rounded to nearest hour
-    * JURYDUTY
-      * rounded to nearest hour
-    * MILITARYLEAVE
-      * rounded to nearest hour
 
 # Format of **.netrc** file
 Netrc file should follow standard formatting rules.
 
 ## Expected Keys
-* NCSA_VSL
-  * User and password to login to the NSCA VSL calendar interface
+* NETID
+  * University of Illinois NetID login
   * Required parameters
     * login
     * password
 * EXCH
   * Used by [pyexch](https://github.com/andylytical/pyexch) to access Exchange calendar
+  * These are likely the same as above, but the format is different
   * Required parameters
     * login
       * format should be *user@domain*
@@ -72,9 +55,9 @@ Netrc file should follow standard formatting rules.
 
 ## Sample Netrc
 ```
-machine NCSA_VSL
-login myvslusername
-password myvslpassword
+machine NETID
+login mynetid
+password mynetidpassword
 
 machine EXCH
 login myexchusername@illinois.edu
