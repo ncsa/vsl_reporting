@@ -63,7 +63,7 @@ action=
 #[[ -z "$DK_TAG" ]] && die "No tags found for docker image: '$DK_USER/$DK_IMAGE'"
 #IMAGE="$DK_USER/$DK_IMAGE:$DK_TAG"
 IMAGE="$DK_USER/$DK_IMAGE"
-IMAGE=$(docker images -q andylytical/ncsa-vsl-reporter | head -1)
+IMAGE=$(docker images "$DK_IMAGE" -q | head -1)
 
 envs=()
 for v in NETRC ${!PYEXCH_*} ; do

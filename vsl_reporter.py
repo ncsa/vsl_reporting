@@ -30,10 +30,11 @@ class VSL_Reporter( object ):
         self.usr = username
         self.pwd = password
         self.userpwd = '{}:{}'.format( username, password )
-        self.last_login = datetime.datetime( 1970, 1, 1 )
         self.g = grab.Grab()
         self.g.setup( cookiefile=self.FN_COOKIES )
-        self.g.setup( debug=True, log_dir='LOGS' )
+        self.FN_COOKIES.touch()
+        if LOGR.getEffectiveLevel() is logging.DEBUG:
+            self.g.setup( debug=True, log_dir='LOGS' )
         self.tz = tzlocal.get_localzone() # get pytz timezone
 
 
@@ -45,7 +46,7 @@ class VSL_Reporter( object ):
         # url_details is a SplitResult object ...
         # SplitResult(scheme='https', netloc='shibboleth.illinois.edu', path='/login.asp', query='/vacation/index.asp%7C', fragment='')
         if url_parts.path.startswith( '/login' ):
-            LOGR.debug( 'Found login page' )
+            LOGR.info( 'Found login page' )
             self._do_login()
 
 
@@ -78,7 +79,7 @@ class VSL_Reporter( object ):
 
     def _do_login( self ):
 
-        LOGR.debug( 'Attempting to login ...' )
+        LOGR.info( 'Attempting to login ...' )
         # Assume the login form is already loaded
         # (from the request that just happened in self._go)
         self.g.submit()
@@ -133,7 +134,8 @@ class VSL_Reporter( object ):
 
     def duo_authenticate( self, tx, parent ):
         g = grab.Grab() #use our own grab instance (don't poison the other one)
-        g.setup( debug=True, log_dir='LOGS.DUO' )
+        if LOGR.getEffectiveLevel() is logging.DEBUG:
+            g.setup( debug=True, log_dir='LOGS.DUO' )
         DUO = {}
         DUO['initialize'] = 'https://verify.uillinois.edu/frame/web/v1/auth'
         DUO['pre_auth'] = 'https://verify.uillinois.edu/frame/devices/preAuth'
@@ -176,6 +178,7 @@ class VSL_Reporter( object ):
         # manually set content-type for json
         g.setup( headers={'Content-Type': 'application/json', 'charset':'UTF-8'} )
         g.go( DUO['push'], post=json.dumps( post ) )
+        LOGR.info( 'Sent DUO authentication request to default device' )
 
         # Get txid, check status (NOTE: txid has nothing to do with TXval from above)
         txid = json.loads( g.doc.body )['status']
@@ -200,8 +203,12 @@ class VSL_Reporter( object ):
             login_status = json.loads( g.doc.body )
             if login_status['status'] == 'allow':
                 break
-            LOGR.debug( f'sleep {pause} seconds' )
+            LOGR.info( f'sleep {pause} seconds' )
             time.sleep( pause )
+        if login_status['status'] != 'allow':
+            raise UserWarning( 'DUO authentication failed' )
+        else:
+            LOGR.info ( 'DUO authentication succeeded' )
         return login_status
 
 

@@ -71,8 +71,6 @@ def run():
     days_report = px.per_day_report( start, end )
     logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
     for ewsdate, data in days_report.items():
-       #force EWSDate to naive Python date
-       # date = datetime.datetime(ewsdate.year, ewsdate.month, ewsdate.day )
        date = ewsdate
        if args.dryrun:
            print( f'DRYRUN: {date} {pprint.pformat(data)} ... doing nothing' )
@@ -81,12 +79,11 @@ def run():
            logging.info( "Successfully submittited date:{} {}".format( date, data ) )
 
 if __name__ == '__main__':
-    fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
-    log_lvl = logging.DEBUG
-    # log_lvl = logging.INFO
+    # log_lvl = logging.DEBUG
+    # fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
+    log_lvl = logging.INFO
+    fmt = '%(levelname)s %(message)s'
     logging.basicConfig( level=log_lvl, format=fmt )
-#    for key in logging.Logger.manager.loggerDict:
-#        print(key)
     no_debug = [ 
         'connectionpool',
         'exchangelib', 

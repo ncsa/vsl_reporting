@@ -14,12 +14,4 @@ IFS=":"; PYPATH="${parts[*]}"
 IFS="$OIFS"
 
 PYTHONPATH="$PYPATH" \
-# $py3 vsl.py "$@"
-
-export PYEXCH_REGEX_JSON='{
-"SICK":"(sick|doctor|dr.appt)",
-"VACATION":"(vacation|PTO|paid time off|personal day)"
-}'
-
-#$py3 vsl.py --list-overdue "$@"
-$py3 vsl.py 
+$py3 vsl.py "$@"
