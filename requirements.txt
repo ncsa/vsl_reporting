@@ -1,4 +1,4 @@
 exchangelib
-grab
+grab == 0.6.40
 tzlocal
 git+https://github.com/andylytical/pyexch
