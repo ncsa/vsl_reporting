@@ -31,8 +31,12 @@ See also: https://github.com/andylytical/pyexch
     parser.add_argument( '-n', '--dryrun', action='store_true' )
     parser.add_argument( '-k', '--netrckey',
         help='key in netrc to use for login,passwd; default=%(default)s' )
-    parser.add_argument( '--list-overdue', action='store_true',
-        help='List overdue dates and exit' )
+    parser.add_argument( '-a', '--auto', action='store_true',
+        help='When used with --list_self, auto-submit dates from Exchange' )
+    parser.add_argument( '-s', '--list_self', action='store_true',
+        help='List overdue dates for self' )
+    parser.add_argument( '-e', '--list_employees', action='store_true',
+        help='List employees and exit' )
     defaults = { 'user': None,
                  'passwd': None,
                  'netrckey': 'NETID',
@@ -53,36 +57,60 @@ See also: https://github.com/andylytical/pyexch
     return args
 
 
-def run():
-    args = process_args()
-    vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
-
+def list_self( args, vsl ):
     start, end = vsl.get_overdue_period()
     if start is None:
         raise SystemExit( 'No reports are due' )
 
     msg = f'Report due for period: {start} - {end}'
     logging.info( msg )
-    if args.list_overdue:
-        raise SystemExit()
- 
-    # Get sick / vacation info from Exchange
-    px = pyexch.pyexch.PyExch()
-    days_report = px.per_day_report( start, end )
-    logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
-    for ewsdate, data in days_report.items():
-       date = ewsdate
-       if args.dryrun:
-           print( f'DRYRUN: {date} {pprint.pformat(data)} ... doing nothing' )
-       else:
-           vsl.submit_date( date, **data )
-           logging.info( "Successfully submittited date:{} {}".format( date, data ) )
+
+    if args.auto:
+        # Get sick / vacation info from Exchange
+        px = pyexch.pyexch.PyExch()
+        days_report = px.per_day_report( start, end )
+        logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
+        for ewsdate, data in days_report.items():
+           date = ewsdate
+           if args.dryrun:
+               print( f'DRYRUN: {date} {pprint.pformat(data)} ... doing nothing' )
+           else:
+               vsl.submit_date( date, **data )
+               logging.info( "Successfully submittited date:{} {}".format( date, data ) )
+
+
+def list_employees( args, vsl ):
+    user_pending = vsl.get_pending_approvals()
+    for uid, approval_keys in user_pending.items():
+        logging.info( f"USER: '{uid}'..." )
+        for akey in approval_keys:
+            logging.info( f"\tPending: '{akey}'" )
+            if args.auto:
+                vsl.approve_pending( akey )
+                logging.info( f"\t... Approved: '{akey}'" )
+
+
+def run():
+    args = process_args()
+    vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
+
+    if args.list_employees:
+        list_employees( args, vsl )
+    elif args.list_self:
+        list_self( args, vsl )
+    else:
+        list_self( args, vsl )
+
 
 if __name__ == '__main__':
     # log_lvl = logging.DEBUG
-    # fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
     log_lvl = logging.INFO
+
     fmt = '%(levelname)s %(message)s'
+    if log_lvl == logging.DEBUG:
+        fmt = '%(levelname)s [%(filename)s:%(funcName)s:%(lineno)s] %(message)s'
+        os.makedirs( 'LOGS', mode=700, exist_ok=True )
+        os.makedirs( 'LOGS.DUO', mode=700, exist_ok=True )
     logging.basicConfig( level=log_lvl, format=fmt )
     no_debug = [ 
         'connectionpool',

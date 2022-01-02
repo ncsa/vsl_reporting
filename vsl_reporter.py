@@ -19,8 +19,10 @@ class VSL_Reporter( object ):
     MIDNIGHT = { 'hour': 0, 'minute': 0, 'second': 0, 'microsecond': 0 }
     URL = {
         'vsl': 'https://my.engr.illinois.edu/vacation/',
-        'login': 'https://my.engr.illinois.edu/login.asp',
         'setdate': 'https://my.engr.illinois.edu/vacation/setdate.asp',
+        'myemployees': 'https://my.engr.illinois.edu/vacation/myemployees.asp',
+        'userdetails': 'https://my.engr.illinois.edu/vacation/userdetails.asp',
+        'approve': 'https://my.engr.illinois.edu/vacation/change_status.asp?ns=A',
     }
     FN_COOKIES = pathlib.Path( 'cookiefile' )
     LOGIN_TIMELIMIT = datetime.timedelta( hours=1 )
@@ -75,6 +77,47 @@ class VSL_Reporter( object ):
             start = datetime.datetime( sy, sm, sd, tzinfo=self.tz )
             end = datetime.datetime( ey, em, ed, tzinfo=self.tz )
         return [ start, end ]
+
+
+    def list_employees( self ):
+        """ Get list of employee UID's
+        """
+        UIDs = []
+        self._go( self.URL['myemployees'] )
+        # submit the form for each different employee type
+        for typ in ( 'ac', 'cce', 'cc' ):
+            LOGR.debug( f"Checking for employees of type '{typ}'" )
+            self.g.doc.choose_form( name='frm_type' )
+            self.g.doc.set_input( 'type', typ )
+            self.g.submit()
+            # Get all employees from the returned doc
+            re_get_employees = re.compile( r'A HREF="userdetails.asp\?user=([a-z]+)"' )
+            for match in re_get_employees.finditer( self.g.doc.unicode_body() ):
+                for m in match.groups():
+                    LOGR.debug( f"Employee: '{m}'" )
+                    UIDs.append( f'{m}' )
+        return UIDs
+
+
+    def get_pending_approvals( self ):
+        pending_approvals = {}
+        for uid in self.list_employees():
+            LOGR.debug( f"Getting pending approvals for UID '{uid}'..." )
+            pending_approvals[uid] = []
+            url = f"{self.URL['userdetails']}?user={uid}"
+            self._go( url )
+            re_get_approval_key = re.compile( 
+                r'href="change_status.asp\?key=\{([^}]+)\}\&ns=A"' )
+            approval_keys = []
+            for match in re_get_approval_key.finditer( self.g.doc.unicode_body() ):
+                for m in match.groups():
+                    LOGR.debug( f"Pending: '{m}'" )
+                    pending_approvals[uid].append( m )
+        return pending_approvals
+
+
+    def approve_pending( self, pend_key ):
+        self._go( f"{self.URL['approve']}&key={pend_key}" )
 
 
     def _do_login( self ):

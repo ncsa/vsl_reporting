@@ -59,17 +59,19 @@ action=
 [[ $TEST -eq 1 ]] && action=echo
 
 # Get most recent docker image tag
-#DK_TAG=$( latest_docker_tag "$DK_USER/$DK_IMAGE" )
-#[[ -z "$DK_TAG" ]] && die "No tags found for docker image: '$DK_USER/$DK_IMAGE'"
-#IMAGE="$DK_USER/$DK_IMAGE:$DK_TAG"
-IMAGE="$DK_USER/$DK_IMAGE"
-IMAGE=$(docker images "$DK_IMAGE" -q | head -1)
+DK_TAG=$( latest_docker_tag "$DK_USER/$DK_IMAGE" )
+[[ -z "$DK_TAG" ]] && die "No tags found for docker image: '$DK_USER/$DK_IMAGE'"
+IMAGE="$DK_USER/$DK_IMAGE:$DK_TAG"
+# IMAGE="$DK_USER/$DK_IMAGE"
+# IMAGE=$(docker images "$DK_IMAGE" -q | head -1)
 
 envs=()
 for v in NETRC ${!PYEXCH_*} ; do
     envs+=( '-e' "$v=${!v}" )
 done
 
+set -x
+docker images -q --filter=reference="$DK_IMAGE" | xargs -r $action docker rmi -f
 $action docker run \
     "${envs[@]}" \
     --mount type=bind,src="${MOUNTPOINT[0]}",dst="${MOUNTPOINT[1]}" \
