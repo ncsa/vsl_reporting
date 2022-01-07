@@ -1,16 +1,41 @@
 # vsl_reporting
 A tool to automate reporting time to UIUC Engr IT VSL calendar using data from Exchange calendar.
 
-# Dependencies
-* Python >= 3.9
+# Quick start
+## Linux
+```
+docker run --rm -it \
+--mount type=bind,src=$HOME,dst=/home \
+-e NETRC=/home/.ssh/netrc \
+-e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' \
+andylytical/ncsa-vsl-reporter:v3.0.0
+```
 
-# Installation and Usage
+## Windows (via Powershell)
+```
+docker run --rm -it `
+--mount type=bind,src=e:\aloftus\private,dst=/private `
+-e NETRC=/private/.netrc `
+-e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' `
+andylytical/ncsa-vsl-reporter:v3.0.0
+```
 
-## Pre-built Docker Image
-See: ...
+## Inside Docker container
+### Show cmdline help message
+`./run.sh --help`
 
-## Build the Docker Image locally
-1. git clone https://github.com/ncsa/vsl_reporting
+### Show VSL entries for self
+`./run.sh --list-self`
+
+### Auto report VSL entries for self
+`./run.sh --list-self --auto`
+
+### Show pending entries for employees
+`./run.sh --list-employees`
+
+### Auto approve pending entries for employees
+`./run.sh --list-employees --auto`
+
 
 # Environment Variables
 Configuration is controlled through the following environment variables:
@@ -35,9 +60,9 @@ Configuration is controlled through the following environment variables:
       * rounded to nearest full day
 
 # Format of **.netrc** file
-Netrc file should follow standard formatting rules.
+See: [The .netrc file format](https://everything.curl.dev/usingcurl/netrc)
 
-## Expected Keys
+### Expected Keys
 * NETID
   * University of Illinois NetID login
   * Required parameters
@@ -53,14 +78,14 @@ Netrc file should follow standard formatting rules.
       * format should be *user@domain*
     * password
 
-## Sample Netrc
+### Sample Netrc
 ```
 machine NETID
 login mynetid
 password mynetidpassword
 
 machine EXCH
-login myexchusername@illinois.edu
-password myexchpasswd
-account myexchusername@illinois.edu
+login mynetid@illinois.edu
+password mynetidpassword
+account mynetid@illinois.edu
 ```
