@@ -8,7 +8,7 @@ docker run --rm -it \
 --mount type=bind,src=$HOME,dst=/home \
 -e NETRC=/home/.ssh/netrc \
 -e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' \
-andylytical/ncsa-vsl-reporter:v3.0.0
+andylytical/ncsa-vsl-reporter:v3.0.1
 ```
 
 ## Windows (via Powershell)
@@ -17,24 +17,17 @@ docker run --rm -it `
 --mount type=bind,src=e:\aloftus\private,dst=/private `
 -e NETRC=/private/.netrc `
 -e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' `
-andylytical/ncsa-vsl-reporter:v3.0.0
+andylytical/ncsa-vsl-reporter:v3.0.1
 ```
 
 ## Inside Docker container
-### Show cmdline help message
-`./run.sh --help`
-
-### Show VSL entries for self
-`./run.sh --list-self`
-
-### Auto report VSL entries for self
-`./run.sh --list-self --auto`
-
-### Show pending entries for employees
-`./run.sh --list-employees`
-
-### Auto approve pending entries for employees
-`./run.sh --list-employees --auto`
+```
+./run.sh --help                   # Show cmdline help message
+./run.sh --list-sel               # Show VSL entries for self
+./run.sh --list-self --auto       # Auto report VSL entries for self
+./run.sh --list-employees         # Show pending entries for employees
+./run.sh --list-employees --auto  # Auto approve pending entries for employees
+```
 
 
 # Environment Variables
@@ -89,3 +82,7 @@ login mynetid@illinois.edu
 password mynetidpassword
 account mynetid@illinois.edu
 ```
+
+# See also
+* https://hub.docker.com/repository/docker/andylytical/ncsa-vsl-reporter
+* https://github.com/ncsa/vsl_reporting

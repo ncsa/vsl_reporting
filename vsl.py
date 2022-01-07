@@ -28,15 +28,15 @@ See also: https://github.com/andylytical/pyexch
 ''',
            }
     parser = argparse.ArgumentParser( **constructor_args )
-    parser.add_argument( '-n', '--dryrun', action='store_true' )
     parser.add_argument( '-k', '--netrckey',
         help='key in netrc to use for login,passwd; default=%(default)s' )
     parser.add_argument( '-a', '--auto', action='store_true',
-        help='When used with --list_self, auto-submit dates from Exchange' )
+        help="When used with --list_self, auto-submit dates from Exchange.\n" \
+             "When used with with --list_employees, auto-approve pending entries." )
     parser.add_argument( '-s', '--list_self', action='store_true',
         help='List overdue dates for self' )
     parser.add_argument( '-e', '--list_employees', action='store_true',
-        help='List employees and exit' )
+        help='List employee pending entries and exit' )
     defaults = { 'user': None,
                  'passwd': None,
                  'netrckey': 'NETID',
@@ -62,21 +62,19 @@ def list_self( args, vsl ):
     if start is None:
         raise SystemExit( 'No reports are due' )
 
-    msg = f'Report due for period: {start} - {end}'
-    logging.info( msg )
+    logging.info( f'Report due for period: {start} - {end}' )
 
-    if args.auto:
-        # Get sick / vacation info from Exchange
-        px = pyexch.pyexch.PyExch()
-        days_report = px.per_day_report( start, end )
-        logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
-        for ewsdate, data in days_report.items():
-           date = ewsdate
-           if args.dryrun:
-               print( f'DRYRUN: {date} {pprint.pformat(data)} ... doing nothing' )
-           else:
-               vsl.submit_date( date, **data )
-               logging.info( "Successfully submittited date:{} {}".format( date, data ) )
+    # Get sick / vacation info from Exchange
+    px = pyexch.pyexch.PyExch()
+    days_report = px.per_day_report( start, end )
+    logging.debug( f'Days report from Exchange: {pprint.pformat(days_report)}' )
+    for ewsdate, data in days_report.items():
+        date = ewsdate
+        if args.auto:
+           vsl.submit_date( date, **data )
+           logging.info( "Successfully submittited date:{} {}".format( date, data ) )
+        else:
+           print( f'EXCH EVENT: {date} {pprint.pformat(data)} ' )
 
 
 def list_employees( args, vsl ):
