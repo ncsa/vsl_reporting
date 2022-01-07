@@ -4,20 +4,22 @@ A tool to automate reporting time to UIUC Engr IT VSL calendar using data from E
 # Quick start
 ## Linux
 ```
+docker images -q 'andylytical/ncsa-vsl-reporter' | xargs -r docker rmi -f
 docker run --rm -it \
 --mount type=bind,src=$HOME,dst=/home \
 -e NETRC=/home/.ssh/netrc \
 -e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' \
-andylytical/ncsa-vsl-reporter:v3.0.1
+andylytical/ncsa-vsl-reporter:main
 ```
 
 ## Windows (via Powershell)
 ```
+# TODO: remove any existing images (to ensure latest is downloaded)
 docker run --rm -it `
 --mount type=bind,src=e:\aloftus\private,dst=/private `
 -e NETRC=/private/.netrc `
 -e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' `
-andylytical/ncsa-vsl-reporter:v3.0.1
+andylytical/ncsa-vsl-reporter:main
 ```
 
 ## Inside Docker container
