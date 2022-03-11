@@ -131,52 +131,57 @@ class VSL_Reporter( object ):
         # .. which generates SAMLRequest and redirects to
         # .. a page with the form expecting user/pass
         # Submit user/passwd
-        self.g.doc.set_input( 'j_username', self.usr )
-        self.g.doc.set_input( 'j_password', self.pwd )
+        self.g.doc.choose_form( id='loginForm' )
+        self.g.doc.set_input( 'UserName', self.usr )
+        self.g.doc.set_input( 'Password', self.pwd )
         self.g.submit()
 
-        # Now we have the page with the DUO iframe
-        # .. Duo auth needs "tx" and "parent"; it will return "auth"
-        # .. After Duo auth, will need to build sig_response from "auth" + "app"
-        # .. and pass it to "parent"
+        # Now we have the page with the DUO iframe,
         # get TX and APP values
-        re_tx_val = re.compile( 'data-sig-request="(TX\|.+):(APP\|.+)"' )
+        re_tx_val = re.compile( "sig_request.: .(TX\|[^:]+):(APP\|[^'\"]+)" )
         match = self.g.doc.rex_search( re_tx_val )
         post_data = {
             'tx': match.group(1),
             'app': match.group(2),
         }
-        # get post action (needed to build "parent")
-        re_post_action = re.compile( 'data-post-action="([^"]+)"' )
-        match = self.g.doc.rex_search( re_post_action )
-        post_path = match.group(1)
-        # Build parent from post-action and current page url
-        url_parts = self.g.doc.url_details()
-        # url_details is a SplitResult object ...
-        # SplitResult(scheme='https', netloc='shibboleth.illinois.edu', path='/login.asp', query='/vacation/index.asp%7C', fragment='')
-        post_data['parent'] = f"{url_parts.scheme}://{url_parts.netloc}{post_path}"
+        LOGR.debug( f"tx: {post_data['tx']}" )
+        LOGR.debug( f"app: {post_data['app']}" )
+
+        # get "Context" and "AuthMethod"
+        self.g.doc.choose_form( id='duo_form' )
+        fields = self.g.doc.form_fields()
+        LOGR.debug( f'add duo_form fields to post data: {pprint.pformat( fields )}' )
+        post_data.update( fields )
+        # get "parent"
+        self.g.doc.choose_form( id='options' )
+        post_data['parent'] = self.g.doc.form.action
         LOGR.debug( f"parent: {post_data['parent']}" )
 
         # Do the DUO auth
+        # ... Duo auth needs "tx" and "parent"; it will return "auth"
+        # ... After Duo auth, will need to build sig_response from "auth" + "app"
+        # ... and pass it to "parent"
         login_status = self.duo_authenticate( post_data['tx'], post_data['parent'] )
 
         # Create sig_response from "auth" (from duo) and "app" (from above)
         post_data['auth'] = login_status['authSig']
         sig_response=':'.join( ( post_data['auth'], post_data['app'] ) ) 
         post = {
-            '_eventId': 'proceed',
             'sig_response': sig_response,
+            'Context': post_data['Context'],
+            'AuthMethod': post_data['AuthMethod']
         }
         # Redirect back to parent (SAML2 SSO)
         self.g.go( post_data['parent'], post=post )
 
-        # Response should be "Press Continue button to proceed"
+        # Response should be "... press the Continue button once to proceed."
         # .. sets SAMLResponse
+        self.g.submit()
         self.g.submit()
 
 
     def duo_authenticate( self, tx, parent ):
-        g = grab.Grab() #use our own grab instance (don't poison the other one)
+        g = grab.Grab() #create a new grab instance (don't poison the other one)
         if LOGR.getEffectiveLevel() is logging.DEBUG:
             g.setup( debug=True, log_dir='LOGS.DUO' )
         DUO = {}
@@ -184,12 +189,14 @@ class VSL_Reporter( object ):
         DUO['pre_auth'] = 'https://verify.uillinois.edu/frame/devices/preAuth'
         DUO['push'] = 'https://verify.uillinois.edu/frame/devices/authPush_async'
         DUO['status'] = 'https://verify.uillinois.edu/frame/devices/authStatus/'
+        DUO['v'] = '2.6'
         # Initialize DUO (get JSESSIONID)
         url_parts = (
             f"{DUO['initialize']}",
             f'?tx={tx}',
             f'&parent={parent}',
-            f"&v=2.1"
+            f'&pullStatus=0',
+            f"&v={DUO['v']}"
             )
         g.go( ''.join(url_parts) )
 
@@ -201,7 +208,7 @@ class VSL_Reporter( object ):
         g.go( DUO['pre_auth'], post=post )
         auth_string = g.doc.body
         auth_data = json.loads( auth_string )
-        #LOGR.debug( f'JSON: {json.dumps(auth_data, indent=2)}' )
+        LOGR.debug( f'JSON: {json.dumps(auth_data, indent=2)}' )
         # Find default device
         default_device = None
         for dev in auth_data['devices']:
@@ -210,7 +217,7 @@ class VSL_Reporter( object ):
                 break
         if default_device is None:
             raise UserWarning( 'Did not find a default duo auth device.' )
-        # LOGR.debug( f'DEFAULT DEVICE: {json.dumps( default_device, indent=2 )}' )
+        LOGR.debug( f'DEFAULT DEVICE: {json.dumps( default_device, indent=2 )}' )
 
         # Initiate duo auth with default device
         post = {

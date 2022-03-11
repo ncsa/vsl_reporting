@@ -25,10 +25,10 @@ andylytical/ncsa-vsl-reporter:main
 ## Inside Docker container
 ```
 ./run.sh --help                   # Show cmdline help message
-./run.sh --list-self               # Show VSL entries for self
-./run.sh --list-self --auto       # Auto report VSL entries for self
-./run.sh --list-employees         # Show pending entries for employees
-./run.sh --list-employees --auto  # Auto approve pending entries for employees
+./run.sh --list_self              # Show VSL entries for self
+./run.sh --list_self --auto       # Auto report VSL entries for self
+./run.sh --list_employees         # Show pending entries for employees
+./run.sh --list_employees --auto  # Auto approve pending entries for employees
 ```
 
 

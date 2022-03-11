@@ -28,6 +28,8 @@ See also: https://github.com/andylytical/pyexch
 ''',
            }
     parser = argparse.ArgumentParser( **constructor_args )
+    parser.add_argument( '--debug', action='store_true',
+        help='Debug mode. Lots of data stored in LOGS/ and LOGS.DUO/' )
     parser.add_argument( '-k', '--netrckey',
         help='key in netrc to use for login,passwd; default=%(default)s' )
     parser.add_argument( '-a', '--auto', action='store_true',
@@ -37,7 +39,8 @@ See also: https://github.com/andylytical/pyexch
         help='List overdue dates for self' )
     parser.add_argument( '-e', '--list_employees', action='store_true',
         help='List employee pending entries and exit' )
-    defaults = { 'user': None,
+    defaults = { 'debug': False,
+                 'user': None,
                  'passwd': None,
                  'netrckey': 'NETID',
     }
@@ -88,8 +91,8 @@ def list_employees( args, vsl ):
                 logging.info( f"\t... Approved: '{akey}'" )
 
 
-def run():
-    args = process_args()
+def run( args ):
+    # args = process_args()
     vsl = vsl_reporter.VSL_Reporter( username=args.user, password=args.passwd )
 
     if args.list_employees:
@@ -103,6 +106,9 @@ def run():
 if __name__ == '__main__':
     # log_lvl = logging.DEBUG
     log_lvl = logging.INFO
+    args = process_args()
+    if args.debug:
+        log_lvl = logging.DEBUG
 
     fmt = '%(levelname)s %(message)s'
     if log_lvl == logging.DEBUG:
@@ -123,4 +129,4 @@ if __name__ == '__main__':
         ]
     for key in no_debug:
             logging.getLogger(key).setLevel(logging.CRITICAL)
-    run()
+    run( args )
