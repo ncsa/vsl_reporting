@@ -63,7 +63,7 @@ class VSL_Reporter( object ):
         # tested at https://regex101.com/
         re_pattern = (
             'Reporting Period Signature Due'
-            '(?:(?!<\/table>).)*'
+            '(?:(?!<\/table>).)*?'
             '([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})'
             ' - '
             '([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})'
