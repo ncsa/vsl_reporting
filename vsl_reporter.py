@@ -91,7 +91,7 @@ class VSL_Reporter( object ):
             self.g.doc.set_input( 'type', typ )
             self.g.submit()
             # Get all employees from the returned doc
-            re_get_employees = re.compile( r'A HREF="userdetails.asp\?user=([a-z]+)"' )
+            re_get_employees = re.compile( r'A HREF="userdetails.asp\?user=([a-z0-9]+)"' )
             for match in re_get_employees.finditer( self.g.doc.unicode_body() ):
                 for m in match.groups():
                     LOGR.debug( f"Employee: '{m}'" )
