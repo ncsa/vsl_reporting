@@ -62,6 +62,7 @@ See: [The .netrc file format](https://everything.curl.dev/usingcurl/netrc)
   * University of Illinois NetID login
   * Required parameters
     * login
+      * format should be *ad.uillinois.edu\NETID*
     * password
 * EXCH
   * Used by [pyexch](https://github.com/andylytical/pyexch) to access Exchange calendar
@@ -76,13 +77,13 @@ See: [The .netrc file format](https://everything.curl.dev/usingcurl/netrc)
 ### Sample Netrc
 ```
 machine NETID
-login mynetid
-password mynetidpassword
+login ad.uillinois.edu\aloftus
+password ...
 
 machine EXCH
-login mynetid@illinois.edu
-password mynetidpassword
-account mynetid@illinois.edu
+login aloftus@illinois.edu
+account aloftus@illinois.edu
+password ...
 ```
 
 # See also
