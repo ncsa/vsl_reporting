@@ -4,6 +4,10 @@ A tool to automate reporting time to UIUC Engr IT VSL calendar using data from E
 # Quick start
 ## Linux
 ```
+latest=$(wget -q
+https://registry.hub.docker.com/v1/repositories/andylytical/ncsa-vsl-reporter/tags
+-O -  | sed -e 's/[][]//g' -e 's/"//g' -e 's/ //g' | tr '}' '\n' | awk -F:
+'{print $3}' | sort -V )
 docker run --rm -it --pull always \
 --mount type=bind,src=$HOME,dst=/home \
 -e NETRC=/home/.ssh/netrc \
