@@ -8,6 +8,7 @@ import string
 import time
 import tzlocal
 import weblib.error
+import urllib.parse
 
 import pprint
 
@@ -38,6 +39,7 @@ class VSL_Reporter( object ):
         if LOGR.getEffectiveLevel() is logging.DEBUG:
             self.g.setup( debug=True, log_dir='LOGS' )
         self.tz = tzlocal.get_localzone() # get pytz timezone
+        self.in_login = False
 
 
     def _go( self, url, **kwargs ):
@@ -47,7 +49,7 @@ class VSL_Reporter( object ):
         url_parts = self.g.doc.url_details()
         # url_details is a SplitResult object ...
         # SplitResult(scheme='https', netloc='shibboleth.illinois.edu', path='/login.asp', query='/vacation/index.asp%7C', fragment='')
-        if url_parts.path.startswith( '/login' ):
+        if 'login' in url_parts.netloc and not self.in_login:
             LOGR.info( 'Found login page' )
             self._do_login()
 
@@ -121,20 +123,131 @@ class VSL_Reporter( object ):
 
 
     def _do_login( self ):
-
+        self.in_login = True
+        URL = {
+            # 'user-pass': 'login.microsoftonline.com/44467e6f-462c-4ea2-823f-7800de5434e3/login',
+            'user-pass': 'login',
+        }
         LOGR.info( 'Attempting to login ...' )
-        # Assume the login form is already loaded
-        # (from the request that just happened in self._go)
+
+        # create and submit the form in LOGS/06.html
+        # (form is normally created dynamically via JS)
+        scripts = self.g.doc.select( "//script[@type='text/javascript']" )
+        config_str = None
+        for s in scripts:
+            text = s.text()
+            if text.startswith( '//<![CDATA[ $Config=' ):
+                #LOGR.debug( f'SCRIPT {i}: {s.text()}' )
+                config_str = text[20:-7]
+        if not config_str:
+            raise UserWarning( '$Config javascript not found' )
+        #LOGR.debug( f'Config Str: {config_str}' )
+        cfg = json.loads( config_str )
+        # LOGR.debug( f"Config:\n{pprint.pformat(cfg)}" )
+        post_data = {
+        'canary': cfg['canary'],
+        'ctx': cfg['sCtx'],
+        'flowToken': cfg['sFT'],
+        'hpgrequestid': cfg['sessionId'],
+        'login': self.usr,
+        'loginfmt': self.usr,
+        'passwd': self.pwd,
+        # 'CookieDisclosure': 0,
+        # 'FoundMSAs': '',
+        # 'IsFidoSupported': 1,
+        # 'LoginOptions': 3,
+        # 'NewUser': 1,
+        # 'PPSX': '',
+        # 'fspost': 0,
+        # 'hisRegion': '',
+        # 'hisScaleUnit': '',
+        # 'i13': '0',
+        # 'i19': 26209,
+        # 'i21': 0,
+        # 'isSignupPost': 0,
+        # 'lrt': '',
+        # 'lrtPartition': '',
+        # 'ps': 2,
+        # 'psRNGCDefaultType': '',
+        # 'psRNGCEntropy': '',
+        # 'psRNGCSLK': '',
+        # 'type': 11,
+        }
+        LOGR.debug( f'Form post data:\n{pprint.pformat(post_data)}' )
+        self._go(
+            url=URL['user-pass'],
+            post=post_data,
+            )
+
+
+        # submit the form in LOGS/07.html
         self.g.submit()
 
-        # login goes to shibboleth,
-        # .. which generates SAMLRequest and redirects to
-        # .. a page with the form expecting user/pass
-        # Submit user/passwd
-        self.g.doc.choose_form( id='loginForm' )
-        self.g.doc.set_input( 'UserName', self.usr )
-        self.g.doc.set_input( 'Password', self.pwd )
+        # submit the form in LOGS/08.html
         self.g.submit()
+
+        # NEXT? 09.html -> form method=get, clone this grab and then send?
+        #LOGR.debug( f'Form Fields (09.html):\n{pprint.pformat(self.g.doc.form_fields())}' )
+        form_fields = self.g.doc.form_fields()
+        app_tx = form_fields['request']
+        self.g.submit()
+
+        # submit the form in LOGS/11.html
+        self.g.submit()
+
+        # LOGS/13.html
+        # get fields needed later for duo
+        duo_sid = self.g.doc.form_fields()['sid']
+        duo_xsrf = self.g.doc.form_fields()['_xsrf']
+        # submit the form ... will send DUO prompt to the user's device
+        self.g.submit()
+
+        # Get the txid from JSON response
+        duo_txid = json.loads( self.g.doc.body )['response']['txid']
+        #LOGR.debug( f'TXID: {duo_txid}' )
+        # create status URL from "prompt" URL
+        url_parts = self.g.doc.url_details()
+        # (scheme='https', netloc='shibboleth.illinois.edu', path='/login.asp', query='/vacation/index.asp%7C', fragment='')
+        LOGR.debug( f'URL parts:\n{url_parts}' )
+        new_url_parts = [ x for x in url_parts ]
+        new_url_parts[2] = url_parts[2].replace('prompt','status')
+        LOGR.debug( f'NEW URL parts:\n{new_url_parts}' )
+        duo_status_url = urllib.parse.urlunsplit( new_url_parts )
+        LOGR.debug( f'DUO STATUS URL: {duo_status_url}' )
+
+        post_data = {
+            'txid': duo_txid,
+            'sid': duo_sid,
+            }
+
+
+        # Loop to get the DUO response status
+        max_tries = 4
+        pause = 5
+        for count in range(4):
+            LOGR.debug( f'Attempt {count} of {max_tries}' )
+            #timestamp = int( time.time() )
+            self._go( duo_status_url, post=post_data )
+            # check duo auth status
+            login_status = json.loads( self.g.doc.body )
+            if login_status['response']['status_code'] == 'allow':
+                break
+            LOGR.info( f'sleep {pause} seconds' )
+            time.sleep( pause )
+        if login_status['response']['status_code'] != 'allow':
+            raise UserWarning( 'DUO authentication failed' )
+        else:
+            LOGR.info ( 'DUO authentication succeeded' )
+
+        raise UserWarning('Testing STOP')
+
+        self.in_login = False
+
+
+
+
+
+
 
         # Now we have the page with the DUO iframe,
         # get TX and APP values
@@ -259,6 +372,7 @@ class VSL_Reporter( object ):
             raise UserWarning( 'DUO authentication failed' )
         else:
             LOGR.info ( 'DUO authentication succeeded' )
+        self.in_login = False
         return login_status
 
 
