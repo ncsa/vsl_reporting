@@ -173,7 +173,7 @@ class VSL_Reporter( object ):
         # 'psRNGCSLK': '',
         # 'type': 11,
         }
-        LOGR.debug( f'Form post data:\n{pprint.pformat(post_data)}' )
+        # LOGR.debug( f'Form post data:\n{pprint.pformat(post_data)}' )
         self._go(
             url=URL['user-pass'],
             post=post_data,
@@ -193,17 +193,49 @@ class VSL_Reporter( object ):
         self.g.submit()
 
         # submit the form in LOGS/11.html
+        url_parts = self.g.doc.url_details()
+        #LOGR.debug( f'11.LOG: URL parts:\n{url_parts}' )
         self.g.submit()
+
+        # NOW at 13.html
+        url_parts = self.g.doc.url_details()
+        LOGR.debug( f'13.LOG: URL parts:\n{url_parts}' )
+
+        # Use a clone of grab to get duo phone data
+        # gclone = self.g.clone()
+        # if LOGR.getEffectiveLevel() is logging.DEBUG:
+        #     gclone.setup( debug=True, log_dir='LOGS_CLONE' )
+        # # build URL for data request
+        # data_path = f'{url_parts[2]}/data'
+        # data_query = urllib.parse.parse_qs( url_parts[3] ) #string -> dict
+        # data_query['post_auth_action'] = 'OIDC_EXIT' #add item to dict
+        # LOGR.debug( f'data_query: {data_query}' )
+        # data_url_parts = [ x for x in url_parts ]
+        # data_url_parts[2] = data_path
+        # data_url_parts[3] = urllib.parse.urlencode( data_query ) #dict -> string
+        # data_url = urllib.parse.urlunsplit( data_url_parts )
+        # LOGR.debug( f'data_url: {data_url}' )
+        # gclone.go( data_url )
+        # duo_auth_data = gclone.doc.json
+        # LOGR.debug( f'duo_auth_data: {duo_auth_data}' )
 
         # LOGS/13.html
         # get fields needed later for duo
-        duo_sid = self.g.doc.form_fields()['sid']
-        duo_xsrf = self.g.doc.form_fields()['_xsrf']
+        LOGR.debug( f'13 form fields: {self.g.doc.form_fields()}' )
+        raise UserWarning('Testing STOP')
+        duo_data = {}
+        for k in ( 'sid', 'device', 'factor', '_xsrf' ):
+            duo_data[k] = urllib.parse.unquote_plus( self.g.doc.form_fields()[k] )
         # submit the form ... will send DUO prompt to the user's device
+        # DOES THIS FORM NEED TO SUBMIT WITH ONLY A FEW FIELDS:
+        #     device=phone1
+        #     factor=Duo Push
+        #     sid=frameless-9c0e3d8d-c5bc-4423-8a94-e38dd064d5b1
         self.g.submit()
 
+
         # Get the txid from JSON response
-        duo_txid = json.loads( self.g.doc.body )['response']['txid']
+        duo_txid = self.g.doc.json['response']['txid']
         #LOGR.debug( f'TXID: {duo_txid}' )
         # create status URL from "prompt" URL
         url_parts = self.g.doc.url_details()
@@ -215,10 +247,20 @@ class VSL_Reporter( object ):
         duo_status_url = urllib.parse.urlunsplit( new_url_parts )
         LOGR.debug( f'DUO STATUS URL: {duo_status_url}' )
 
+        # post_data = {
+        #     'txid': duo_txid,
+        #     'sid': duo_sid,
+        #     }
         post_data = {
-            'txid': duo_txid,
             'sid': duo_sid,
+            'device': duo_device,
+            'factor': duo_factor,
             }
+        self._go( duo_status_url, post=post_data )
+        login_status = self.g.doc.json
+        LOGR.debug( f'STATUS 1: {login_status}' )
+
+        raise UserWarning('Testing STOP')
 
 
         # Loop to get the DUO response status
@@ -229,7 +271,7 @@ class VSL_Reporter( object ):
             #timestamp = int( time.time() )
             self._go( duo_status_url, post=post_data )
             # check duo auth status
-            login_status = json.loads( self.g.doc.body )
+            login_status = self.g.doc.json
             if login_status['response']['status_code'] == 'allow':
                 break
             LOGR.info( f'sleep {pause} seconds' )
