@@ -186,11 +186,18 @@ class VSL_Reporter( object ):
         # submit the form in LOGS/08.html
         self.g.submit()
 
-        # NEXT? 09.html -> form method=get, clone this grab and then send?
-        #LOGR.debug( f'Form Fields (09.html):\n{pprint.pformat(self.g.doc.form_fields())}' )
+        # submit the form in LOGS/09.html -> form method=get, clone this grab and then send?
+        url_parts = list( urllib.parse.urlsplit( self.g.doc.form.action )[:3] )
         form_fields = self.g.doc.form_fields()
         app_tx = form_fields['request']
-        self.g.submit()
+        url_parts.append( urllib.parse.urlencode( form_fields ) ) #query string
+        url_parts.append( '' ) #fragment
+        LOGR.debug( f'URLparts:\n{pprint.pformat(url_parts)}\nFormFields:\n{pprint.pformat(form_fields)}' )
+        duo_url = urllib.parse.urlunsplit( url_parts )
+        LOGR.debug( f'DUO URL:\n{duo_url}' )
+        self.duo_authenticate( duo_url )
+        raise UserWarning('Testing STOP')
+        #self.g.submit()
 
         # submit the form in LOGS/11.html
         url_parts = self.g.doc.url_details()
@@ -335,16 +342,25 @@ class VSL_Reporter( object ):
         self.g.submit()
 
 
-    def duo_authenticate( self, tx, parent ):
+    def duo_authenticate( self, url ):
         g = grab.Grab() #create a new grab instance (don't poison the other one)
         if LOGR.getEffectiveLevel() is logging.DEBUG:
             g.setup( debug=True, log_dir='LOGS.DUO' )
-        DUO = {}
-        DUO['initialize'] = 'https://verify.uillinois.edu/frame/web/v1/auth'
-        DUO['pre_auth'] = 'https://verify.uillinois.edu/frame/devices/preAuth'
-        DUO['push'] = 'https://verify.uillinois.edu/frame/devices/authPush_async'
-        DUO['status'] = 'https://verify.uillinois.edu/frame/devices/authStatus/'
-        DUO['v'] = '2.6'
+
+        g.go( url )
+        raise UserWarning('Testing STOP')
+
+
+
+
+
+
+        # DUO = {}
+        # DUO['initialize'] = 'https://verify.uillinois.edu/frame/web/v1/auth'
+        # DUO['pre_auth'] = 'https://verify.uillinois.edu/frame/devices/preAuth'
+        # DUO['push'] = 'https://verify.uillinois.edu/frame/devices/authPush_async'
+        # DUO['status'] = 'https://verify.uillinois.edu/frame/devices/authStatus/'
+        # DUO['v'] = '2.6'
         # Initialize DUO (get JSESSIONID)
         url_parts = (
             f"{DUO['initialize']}",
