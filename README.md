@@ -3,45 +3,24 @@ A tool to automate reporting time to UIUC Engr IT VSL calendar using data from E
 
 # Quick start
 ## Linux
-```
-latest=$(wget -q
-https://registry.hub.docker.com/v1/repositories/andylytical/ncsa-vsl-reporter/tags
--O -  | sed -e 's/[][]//g' -e 's/"//g' -e 's/ //g' | tr '}' '\n' | awk -F:
-'{print $3}' | sort -V )
-docker run --rm -it --pull always \
---mount type=bind,src=$HOME,dst=/home \
--e NETRC=/home/.ssh/netrc \
--e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' \
-andylytical/ncsa-vsl-reporter:main
-```
+1. `curl -o go_vsl.sh https://raw.githubusercontent.com/ncsa/vsl_reporting/main/go.sh`
+1. `bash ./go_vsl.sh`
 
-## Windows (via [Git Bash](https://gitforwindows.org/))
-Same as Linux instructions, above.
-
-## Windows (via Powershell)
-NOTE: Not tested anymore. YMMV
-```
-docker run --rm -it --pull always `
---mount type=bind,src=e:\aloftus\private,dst=/private `
--e NETRC=/private/.netrc `
--e PYEXCH_REGEX_JSON='{"SICK":"(sick|doctor|dr.appt)","VACATION":"(vacation|PTO|paid time off|personal day)"}' `
-andylytical/ncsa-vsl-reporter:main
-```
 
 ## Inside Docker container
 ```
-./run.sh --help                   # Show cmdline help message
-./run.sh --list_self              # Show VSL entries for self
-./run.sh --list_self --auto       # Auto report VSL entries for self
-./run.sh --list_employees         # Show pending entries for employees
-./run.sh --list_employees --auto  # Auto approve pending entries for employees
+./vsl.py --help                   # Show cmdline help message
+./vsl.py --list_self              # Show VSL entries for self
+./vsl.py --list_self --auto       # Auto report VSL entries for self
+./vsl.py --list_employees         # Show pending entries for employees
+./vsl.py --list_employees --auto  # Auto approve pending entries for employees
 ```
 
 
 # Environment Variables
 Configuration is controlled through the following environment variables:
 * NETRC
-  * default: /root/.netrc
+  * default: ~/.netrc
 * PYEXCH_REGEX_JSON
   * default: pyexch.PyExch.DEFAULT_REGEX_MAP
   * JSON formatted [dictionary](https://www.w3resource.com/JSON/structures.php)

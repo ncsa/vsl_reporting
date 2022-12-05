@@ -246,7 +246,8 @@ class VSL_Reporter( object ):
         #LOGR.debug( f'TXID: {duo_txid}' )
         # create status URL from "prompt" URL
         url_parts = self.g.doc.url_details()
-        # (scheme='https', netloc='shibboleth.illinois.edu', path='/login.asp', query='/vacation/index.asp%7C', fragment='')
+        # see also: urllib.parse.urlsplit()
+        # at https://docs.python.org/3/library/urllib.parse.html#module-urllib.parse
         LOGR.debug( f'URL parts:\n{url_parts}' )
         new_url_parts = [ x for x in url_parts ]
         new_url_parts[2] = url_parts[2].replace('prompt','status')
@@ -346,8 +347,52 @@ class VSL_Reporter( object ):
         g = grab.Grab() #create a new grab instance (don't poison the other one)
         if LOGR.getEffectiveLevel() is logging.DEBUG:
             g.setup( debug=True, log_dir='LOGS.DUO' )
-
         g.go( url )
+        # results in LOGS.DUO/10.html (303) & 11.html
+
+        # submit form in LOGS.DUO/11.html
+        g.submit()
+        # results in LOGS.DUO/12.html (302) & 13.html
+
+        duo_data = {}
+        for k in ( 'sid', 'device', 'factor', '_xsrf' ):
+            duo_data[k] = urllib.parse.unquote_plus( self.g.doc.form_fields()[k] )
+        # submit form in LOGS.DUO/13.html
+        # sends the DUO phone prompt
+        g.submit()
+        # results in 14.html (JSON with "TXID")
+        # ALTERNATIVELY ... do a POST with just device, factor, sid
+
+        # extract txid from LOGS.DUO/14.html (json)
+        duo_data['txid'] = g.doc.json['response']['txid']
+        # create "status" URL from "prompt" URL
+        url_parts = [ x for x in g.doc.url_details() ]
+        url_parts[2] = url_parts[2].replace('prompt','status')
+        duo_status_url = urllib.parse.urlunsplit( url_parts )
+        LOGR.debug( f'DUO STATUS URL: {duo_status_url}' )
+        post_data = {
+            'txid': duo_data['txid'],
+            'sid': duo_data['sid'],
+            }
+        # Loop to get the DUO response status
+        max_tries = 1
+        pause = 5
+        for count in range(max_tries):
+            LOGR.debug( f'Attempt {count} of {max_tries}' )
+            #timestamp = int( time.time() )
+            g.go( duo_status_url, post=post_data )
+            # check duo auth status
+            login_status = g.doc.json
+            if login_status['response']['status_code'] == 'allow':
+                break
+            LOGR.info( f'sleep {pause} seconds' )
+            time.sleep( pause )
+        if login_status['response']['status_code'] != 'allow':
+            raise UserWarning( 'DUO authentication failed' )
+        else:
+            LOGR.info ( 'DUO authentication succeeded' )
+
+
         raise UserWarning('Testing STOP')
 
 
