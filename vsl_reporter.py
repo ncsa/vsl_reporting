@@ -125,8 +125,8 @@ class VSL_Reporter( object ):
     def _do_login( self ):
         self.in_login = True
         URL = {
-            'user-pass': 'login.microsoftonline.com/44467e6f-462c-4ea2-823f-7800de5434e3/login',
-            # 'user-pass': 'login',
+            # 'user-pass': 'login.microsoftonline.com/44467e6f-462c-4ea2-823f-7800de5434e3/login',
+            'user-pass': 'login',
         }
         LOGR.info( 'Attempting to login ...' )
 
