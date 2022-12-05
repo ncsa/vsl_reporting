@@ -132,6 +132,7 @@ class VSL_Reporter( object ):
 
         # create and submit the form in LOGS/06.html
         # (form is normally created dynamically via JS)
+        # <title>Sign in to your account</title>
         scripts = self.g.doc.select( "//script[@type='text/javascript']" )
         config_str = None
         for s in scripts:
@@ -145,33 +146,40 @@ class VSL_Reporter( object ):
         cfg = json.loads( config_str )
         # LOGR.debug( f"Config:\n{pprint.pformat(cfg)}" )
         post_data = {
-        'canary': cfg['canary'],
-        'ctx': cfg['sCtx'],
-        'flowToken': cfg['sFT'],
-        'hpgrequestid': cfg['sessionId'],
-        'login': self.usr,
-        'loginfmt': self.usr,
-        'passwd': self.pwd,
-        # 'CookieDisclosure': 0,
-        # 'FoundMSAs': '',
-        # 'IsFidoSupported': 1,
-        # 'LoginOptions': 3,
-        # 'NewUser': 1,
-        # 'PPSX': '',
-        # 'fspost': 0,
-        # 'hisRegion': '',
-        # 'hisScaleUnit': '',
-        # 'i13': '0',
-        # 'i19': 26209,
-        # 'i21': 0,
-        # 'isSignupPost': 0,
-        # 'lrt': '',
-        # 'lrtPartition': '',
-        # 'ps': 2,
-        # 'psRNGCDefaultType': '',
-        # 'psRNGCEntropy': '',
-        # 'psRNGCSLK': '',
-        # 'type': 11,
+            'canary': cfg['canary'],
+            'ctx': cfg['sCtx'],
+            'flowToken': cfg['sFT'],
+            'hpgrequestid': cfg['sessionId'],
+            'login': self.usr,
+            'loginfmt': self.usr,
+            'passwd': self.pwd,
+        }
+        # These seem less or unimportant
+        # most aren't even present in the source
+        post_data.update( { 
+            'CookieDisclosure': 0,
+            'FoundMSAs': '',
+            'IsFidoSupported': 1,
+            'LoginOptions': 3,
+            'NewUser': 1,
+            'PPSX': '',
+            'fspost': 0,
+            'hisRegion': '',
+            'hisScaleUnit': '',
+            'i13': '0',
+            'i19': 26209, #this one seems to change but not present in source
+            'i21': 0,
+            'isRecoveryAttemptPost': 0,
+            'isSignupPost': 0,
+            'lrt': '',
+            'lrtPartition': '',
+            'ps': 2,
+            'psRNGCDefaultType': '',
+            'psRNGCEntropy': '',
+            'psRNGCSLK': '',
+            'type': 11,
+        } )
+
         }
         # LOGR.debug( f'Form post data:\n{pprint.pformat(post_data)}' )
         self._go(
@@ -181,6 +189,8 @@ class VSL_Reporter( object ):
 
 
         # submit the form in LOGS/07.html
+        # Check for <title>Working...</title>
+        self.g.text_assert( '<title>Working...</title>' )
         self.g.submit()
 
         # submit the form in LOGS/08.html
