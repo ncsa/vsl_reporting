@@ -156,6 +156,7 @@ class VSL_Reporter( object ):
         }
         # These seem less or unimportant
         # most aren't even present in the source
+            # 'i19': 26209, #this one seems to change but not present in source
         post_data.update( { 
             'CookieDisclosure': 0,
             'FoundMSAs': '',
@@ -167,7 +168,6 @@ class VSL_Reporter( object ):
             'hisRegion': '',
             'hisScaleUnit': '',
             'i13': '0',
-            'i19': 26209, #this one seems to change but not present in source
             'i21': 0,
             'isRecoveryAttemptPost': 0,
             'isSignupPost': 0,
@@ -179,18 +179,54 @@ class VSL_Reporter( object ):
             'psRNGCSLK': '',
             'type': 11,
         } )
-
-        }
         # LOGR.debug( f'Form post data:\n{pprint.pformat(post_data)}' )
+
+
+
+        # ### DEBUG
+        # # First, see if this is important: login.microsoftonline.com/common/GetCredentialType
+        # test_url = 'https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US'
+        # test_data = {
+        #     'flowToken': post_data['flowToken'],
+        #     'username': post_data['login'],
+        #     'originalRequest': post_data['ctx'],
+        #     "checkPhones": False,
+        #     "country": "US",
+        #     "federationFlags": 0,
+        #     "forceotclogin": False,
+        #     "isAccessPassSupported": True,
+        #     "isCookieBannerShown": False,
+        #     "isExternalFederationDisallowed": False,
+        #     "isFidoSupported": True,
+        #     "isOtherIdpSupported": False,
+        #     "isRemoteConnectSupported": False,
+        #     "isRemoteNGCSupported": True,
+        #     "isSignup": False,
+        # }
+        # ### THIS IS THE NEW 06
+        # self._go(
+        #     url=test_url,
+        #     post=test_data,
+        # )
+        # ### MAKES BELOW THE NEW 07
+        # ### and 08 should have <title>Working...
+
         self._go(
             url=URL['user-pass'],
             post=post_data,
-            )
+        )
 
 
         # submit the form in LOGS/07.html
-        # Check for <title>Working...</title>
-        self.g.text_assert( '<title>Working...</title>' )
+        # # Check for <title>Working...</title>
+        # try:
+        #     self.g.doc.text_assert( '<title>Working...</title>' )
+        # except weblib.error.DataNotFound as e:
+        #     self._go(
+        #         url=URL['user-pass'],
+        #         post=post_data,
+        #         )
+        self.g.doc.text_assert( '<title>Working...</title>' )
         self.g.submit()
 
         # submit the form in LOGS/08.html
